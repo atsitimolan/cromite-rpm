@@ -5,7 +5,7 @@
 %define debug_package %{nil}
 
 Name:           cromite
-Version:        143.0.7499.40
+Version:        143.0.7499.110
 Release:        1%{?dist}
 Summary:        Cromite a Bromite fork with ad blocking and privacy enhancements (binary release)
 
