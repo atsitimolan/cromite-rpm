@@ -1,7 +1,7 @@
 name: Check for Update, Build and Release
 
 on:
-  workflow_dispatch: # 
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
 
@@ -72,7 +72,7 @@ jobs:
             set -e
             echo "===== workspace ====="
             ls -lh /github/workspace
-            dnf install -y rpm-build rpmdevtools spectool git binutils tar gcc make pkgconf-pkg-config glib2-devel
+            dnf install -y jq rpm-build rpmdevtools spectool git binutils tar gcc make pkgconf-pkg-config glib2-devel
             rpmdev-setuptree
             cd /github/workspace
             spectool -g -R cromite.spec
@@ -92,50 +92,32 @@ jobs:
           find . -type f | grep -E '\.rpm$'
           
       - name: Find main binary RPM path
+        if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
         id: find_rpm
         run: |
           RPM_PATH=$(find . -maxdepth 1 -type f -name "cromite-[0-9]*.x86_64.rpm" | grep -v debuginfo | grep -v debugsource | head -n1)
           echo "RPM_PATH=$RPM_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Find SRPM path
+        if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
         id: find_srpm
         run: |
           SRPM_PATH=$(find . -maxdepth 1 -type f -name "cromite-*.src.rpm" | head -n1)
           echo "SRPM_PATH=$SRPM_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Create Release
+      - name: Create Release and Upload Assets
         if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_release.outputs.LATEST_VERSION }}
-          release_name: Release v${{ steps.get_release.outputs.LATEST_VERSION }}
+          name: Release v${{ steps.get_release.outputs.LATEST_VERSION }}
           draft: false
           prerelease: false
-
-      - name: Upload binary RPM to Release
-        if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
-        uses: actions/upload-release-asset@v1
+          files: |
+            ${{ steps.find_rpm.outputs.RPM_PATH }}
+            ${{ steps.find_srpm.outputs.SRPM_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_rpm.outputs.RPM_PATH }}
-          asset_name: cromite-${{ steps.get_release.outputs.LATEST_VERSION }}.rpm
-          asset_content_type: application/x-rpm
-
-      - name: Upload SRPM to Release
-        if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_srpm.outputs.SRPM_PATH }}
-          asset_name: cromite-${{ steps.get_release.outputs.LATEST_VERSION }}.src.rpm
-          asset_content_type: application/x-rpm
 
       - name: Commit and push spec file changes
         if: steps.update_spec.outputs.NEEDS_UPDATE == 'true'
