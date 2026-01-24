@@ -1,6 +1,6 @@
 # Cromite RPM
 
-RPM packages for Cromite (a Bromite fork with built-in ad blocking and privacy enhancements).
+RPM packages for [Cromite](https://www.cromite.org) (a Bromite fork with built-in ad blocking and privacy enhancements).
 
 Binary repackaging of the upstream project: https://github.com/uazo/cromite
 
